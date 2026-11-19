@@ -529,7 +529,7 @@ export const VotersView: React.FC = () => {
           </div>
         </div>
 
-        <div ref={tableContainerRef} className="overflow-x-auto touch-pan-x scroll-smooth">
+        <div ref={tableContainerRef} className="overflow-x-auto touch-auto scroll-smooth">
           <table className="w-full min-w-[780px] sm:min-w-[850px] text-left text-xs border-collapse">
             <thead>
               <tr className="bg-slate-50/80 border-b border-slate-200 text-slate-600 font-bold">
@@ -642,8 +642,8 @@ export const VotersView: React.FC = () => {
       {/* Add / Edit Voter Modal */}
       {modalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs">
-          <div className="bg-white rounded-2xl shadow-xl border border-slate-200 w-full max-w-md overflow-hidden animate-in fade-in zoom-in-95 duration-150">
-            <div className="p-5 border-b border-slate-200 flex items-center justify-between bg-slate-50">
+          <div className="bg-white rounded-2xl shadow-xl border border-slate-200 w-full max-w-md max-h-[90vh] flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-150">
+            <div className="p-5 border-b border-slate-200 flex items-center justify-between bg-slate-50 shrink-0">
               <h3 className="font-bold text-slate-900 text-sm">
                 {editingItem ? 'Edit Data Pemilih' : 'Tambah Pemilih Baru'}
               </h3>
@@ -656,7 +656,7 @@ export const VotersView: React.FC = () => {
               </button>
             </div>
 
-            <form onSubmit={handleSubmit} className="p-5 space-y-4 text-xs">
+            <form onSubmit={handleSubmit} className="p-5 space-y-4 text-xs overflow-y-auto flex-1">
               {errorMsg && (
                 <div className="p-3 bg-rose-50 border border-rose-200 text-rose-700 rounded-xl">
                   {errorMsg}

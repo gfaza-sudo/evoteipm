@@ -36,12 +36,12 @@ const AppContent: React.FC = () => {
     return (
       <div className="min-h-screen bg-slate-100 flex flex-col font-sans">
         <Navbar onOpenMobileMenu={() => setMobileSidebarOpen(true)} />
-        <div className="flex-1 flex overflow-hidden">
+        <div className="flex-1 flex min-w-0">
           <AdminSidebar
             mobileOpen={mobileSidebarOpen}
             onCloseMobile={() => setMobileSidebarOpen(false)}
           />
-          <main className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8">
+          <main className="flex-1 min-w-0 p-4 sm:p-6 lg:p-8">
             <div className="max-w-7xl mx-auto">
               {adminActiveTab === 'dashboard' && <DashboardView />}
               {adminActiveTab === 'pimpinan' && <PimpinanView />}
