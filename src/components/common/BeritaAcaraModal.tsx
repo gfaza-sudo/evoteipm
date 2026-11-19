@@ -287,7 +287,7 @@ export const BeritaAcaraModal: React.FC<BeritaAcaraModalProps> = ({
                 {/* Paragraf Pembuka - Ukuran Font 12 */}
                 <div className="space-y-2 mb-4 text-[12pt] leading-relaxed text-justify text-slate-900">
                   <p>
-                    Pada hari ini, <strong className="font-bold text-slate-950">{fullDateText}</strong>, bertempat di SMA Muhammadiyah 1 Taman, Panitia Pemilihan (PANLIH) telah melaksanakan pemungutan dan penghitungan suara secara e-Voting pada agenda Pemilihan Calon Formatur Pimpinan Cabang Ikatan Pelajar Muhammadiyah Sepanjang untuk masa amanah {periodText}.
+                    Pada hari ini, <strong className="font-bold text-slate-950">{fullDateText}</strong>, bertempat di SD Muhammadiyah 1 & 2 Taman, Panitia Pemilihan (PANLIH) telah melaksanakan pemungutan dan penghitungan suara secara e-Voting pada agenda Pemilihan Calon Formatur Pimpinan Cabang Ikatan Pelajar Muhammadiyah Sepanjang untuk masa amanah {periodText}.
                   </p>
                   <p>
                     Pelaksanaan pemilihan diselenggarakan secara Langsung, Umum, Bebas, Rahasia, Jujur, dan Adil (LUBER & JURDIL), dengan ketentuan setiap pemilih memiliki hak suara untuk memilih <strong className="font-bold text-slate-950">{requiredChoices} ({getNumberInWords(requiredChoices)}) orang calon formatur</strong> dari total {formaturs.length} ({getNumberInWords(formaturs.length)}) calon tetap formatur.

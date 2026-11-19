@@ -94,7 +94,7 @@ export const downloadBeritaAcaraPDF = (options: GeneratePdfOptions): boolean => 
       title: 'Berita Acara Rekapitulasi Pemilihan Formatur - IPM Sepanjang',
       subject: `Musyawarah Cabang ${periodText} (Standar Kertas A4)`,
       author: 'Panitia Pemilihan Musyawarah Cabang IPM Sepanjang',
-      keywords: 'Berita Acara, Pemilihan Formatur, IPM Sepanjang, A4, SMA Muhammadiyah 1 Taman',
+      keywords: 'Berita Acara, Pemilihan Formatur, IPM Sepanjang, A4, SD Muhammadiyah 1 & 2 Taman',
       creator: 'Panlih Musyawarah IPM Sepanjang',
     });
 
@@ -219,7 +219,7 @@ export const downloadBeritaAcaraPDF = (options: GeneratePdfOptions): boolean => 
     doc.setFontSize(11); // Set to crisp 11-12pt redaksi
     doc.setTextColor(30, 41, 59);
 
-    const para1 = `Pada hari ini, ${dateInfo.fullDateText}, bertempat di SMA Muhammadiyah 1 Taman, Panitia Pemilihan (PANLIH) telah melaksanakan pemungutan dan penghitungan suara secara e-Voting pada agenda Pemilihan Calon Formatur Pimpinan Cabang Ikatan Pelajar Muhammadiyah Sepanjang untuk masa amanah ${periodText}.`;
+    const para1 = `Pada hari ini, ${dateInfo.fullDateText}, bertempat di SD Muhammadiyah 1 & 2 Taman, Panitia Pemilihan (PANLIH) telah melaksanakan pemungutan dan penghitungan suara secara e-Voting pada agenda Pemilihan Calon Formatur Pimpinan Cabang Ikatan Pelajar Muhammadiyah Sepanjang untuk masa amanah ${periodText}.`;
     const splitPara1 = doc.splitTextToSize(para1, contentWidth);
     doc.text(splitPara1, marginX, cursorY);
     cursorY += splitPara1.length * 4.6 + 2.5;
