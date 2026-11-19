@@ -133,11 +133,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   // Admin login
   const loginAdmin = async (username: string, passwordPlain: string): Promise<{ success: boolean; message: string }> => {
     const currentSettings = await dbService.getSettings();
-    const hash = await hashPassword(passwordPlain);
-    const isPanlihPass = passwordPlain.trim() === 'panlih123' || hash === '88c5ac40891d2b53180e83ad67104286465af8b548d681240487392da288d057';
-    const isConfigPass = hash === currentSettings.admin_password_hash;
+    const hash = await hashPassword(passwordPlain.trim());
+    const isValidUsername =
+      username.trim().toLowerCase() === currentSettings.admin_username.trim().toLowerCase();
+    const isValidPassword = hash === currentSettings.admin_password_hash;
 
-    if (username.trim().toLowerCase() === currentSettings.admin_username.toLowerCase() && (isPanlihPass || isConfigPass)) {
+    if (isValidUsername && isValidPassword) {
       setAdminLoggedIn(true);
       setRole('admin');
       sessionStorage.setItem(STORAGE_KEY_ADMIN_AUTH, 'true');

@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useApp } from '../../context/AppContext';
-import { ShieldCheck, KeyRound, User, ArrowLeft, ArrowRight, Lock } from 'lucide-react';
+import { ShieldCheck, KeyRound, User, ArrowLeft, ArrowRight, Lock, Eye, EyeOff } from 'lucide-react';
 
 interface AdminLoginViewProps {
   onBackToVoter: () => void;
@@ -8,8 +8,9 @@ interface AdminLoginViewProps {
 
 export const AdminLoginView: React.FC<AdminLoginViewProps> = ({ onBackToVoter }) => {
   const { loginAdmin, settings } = useApp();
-  const [username, setUsername] = useState('admin');
-  const [password, setPassword] = useState('panlih123');
+  const [username, setUsername] = useState('');
+  const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
   const [loading, setLoading] = useState(false);
 
@@ -47,7 +48,7 @@ export const AdminLoginView: React.FC<AdminLoginViewProps> = ({ onBackToVoter })
             PORTAL PANLIH
           </h1>
           <p className="text-xs text-slate-400 mt-1">
-            Pimpinan Cabang Ikatan Pelajar Muhammadiyah Sepanjang
+            {settings.org_name || 'Pimpinan Cabang Ikatan Pelajar Muhammadiyah Sepanjang'}
           </p>
         </div>
 
@@ -60,7 +61,7 @@ export const AdminLoginView: React.FC<AdminLoginViewProps> = ({ onBackToVoter })
             </div>
           )}
 
-          <form onSubmit={handleSubmit} className="space-y-4 text-xs">
+          <form onSubmit={handleSubmit} autoComplete="off" className="space-y-4 text-xs">
             <div>
               <label className="block font-bold text-slate-300 mb-1.5">
                 Username Admin
@@ -69,10 +70,13 @@ export const AdminLoginView: React.FC<AdminLoginViewProps> = ({ onBackToVoter })
                 <User className="w-4 h-4 text-slate-500 absolute left-3.5 top-1/2 -translate-y-1/2" />
                 <input
                   type="text"
+                  name="panlih-admin-username"
+                  autoComplete="off"
                   required
+                  placeholder="Masukkan username admin"
                   value={username}
                   onChange={(e) => setUsername(e.target.value)}
-                  className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-slate-800 bg-slate-900 text-white focus:outline-hidden focus:border-amber-500 focus:ring-2 focus:ring-amber-500/20 font-mono text-xs"
+                  className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-slate-800 bg-slate-900 text-white placeholder:text-slate-500 focus:outline-hidden focus:border-amber-500 focus:ring-2 focus:ring-amber-500/20 font-mono text-xs"
                 />
               </div>
             </div>
@@ -84,12 +88,23 @@ export const AdminLoginView: React.FC<AdminLoginViewProps> = ({ onBackToVoter })
               <div className="relative">
                 <KeyRound className="w-4 h-4 text-slate-500 absolute left-3.5 top-1/2 -translate-y-1/2" />
                 <input
-                  type="password"
+                  type={showPassword ? 'text' : 'password'}
+                  name="panlih-admin-password"
+                  autoComplete="new-password"
                   required
+                  placeholder="Masukkan password admin"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-slate-800 bg-slate-900 text-white focus:outline-hidden focus:border-amber-500 focus:ring-2 focus:ring-amber-500/20 text-xs"
+                  className="w-full pl-10 pr-10 py-2.5 rounded-xl border border-slate-800 bg-slate-900 text-white placeholder:text-slate-500 focus:outline-hidden focus:border-amber-500 focus:ring-2 focus:ring-amber-500/20 text-xs"
                 />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword((prev) => !prev)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-300 transition-colors"
+                  aria-label={showPassword ? 'Sembunyikan password' : 'Tampilkan password'}
+                >
+                  {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                </button>
               </div>
             </div>
 
