@@ -1,0 +1,6 @@
+{
+  "name": "e-voteipm - Sistem Pemilihan Formatur IPM",
+  "description": "Aplikasi E-Voting Pemilihan Ketua dan Formatur Ikatan Pelajar Muhammadiyah berbasis web, aman, transparan, dan responsif.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
