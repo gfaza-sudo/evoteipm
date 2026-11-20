@@ -244,7 +244,71 @@ class DBService {
   }
 
   async deletePimpinan(id: string): Promise<void> {
+    const deletedVoterIds = new Set<string>();
+
     if (isValidUuid(id)) {
+      // 1. Cari seluruh akun pemilih yang terdaftar pada Asal Pimpinan ini sebelum pimpinan dihapus
+      //    (Penting karena schema FK memakai ON DELETE SET NULL)
+      const { data: linkedVoters, error: fetchVotersErr } = await supabase
+        .from('voters')
+        .select('id, has_voted, voted_at')
+        .eq('pimpinan_id', id);
+
+      if (fetchVotersErr) {
+        throw new Error(formatSupabaseError(fetchVotersErr, 'voters'));
+      }
+
+      const votersToDelete = linkedVoters || [];
+      for (const v of votersToDelete) {
+        deletedVoterIds.add(v.id);
+      }
+
+      // 2. Jika ada pemilih dari pimpinan ini yang sudah memilih, bersihkan juga suaranya di tabel votes
+      const votedVoters = votersToDelete.filter((v: any) => v.has_voted);
+      if (votedVoters.length > 0) {
+        const votedIds = votedVoters.map((v: any) => v.id);
+        const { error: delVotesByVoterErr } = await supabase
+          .from('votes')
+          .delete()
+          .in('voter_id', votedIds);
+
+        const isMissingVoterIdCol =
+          delVotesByVoterErr?.code === '42703' ||
+          delVotesByVoterErr?.code === 'PGRST204' ||
+          delVotesByVoterErr?.message?.toLowerCase().includes('voter_id');
+
+        if (delVotesByVoterErr && !isMissingVoterIdCol) {
+          throw new Error(formatSupabaseError(delVotesByVoterErr, 'votes'));
+        }
+
+        if (isMissingVoterIdCol) {
+          const votedTimestamps = votedVoters
+            .map((v: any) => v.voted_at)
+            .filter((ts: any): ts is string => Boolean(ts));
+          if (votedTimestamps.length > 0) {
+            const { error: delByTimeErr } = await supabase
+              .from('votes')
+              .delete()
+              .in('cast_at', votedTimestamps);
+            if (delByTimeErr) {
+              throw new Error(formatSupabaseError(delByTimeErr, 'votes'));
+            }
+          }
+        }
+      }
+
+      // 3. Hapus seluruh akun pemilih di tabel voters yang terhubung dengan pimpinan_id ini
+      if (votersToDelete.length > 0) {
+        const { error: delVotersErr } = await supabase
+          .from('voters')
+          .delete()
+          .eq('pimpinan_id', id);
+        if (delVotersErr) {
+          throw new Error(formatSupabaseError(delVotersErr, 'voters'));
+        }
+      }
+
+      // 4. Hapus data Asal Pimpinan di tabel pimpinan_asal
       const { error } = await supabase.from('pimpinan_asal').delete().eq('id', id);
       if (error) {
         throw new Error(formatSupabaseError(error, 'pimpinan_asal'));
@@ -252,9 +316,28 @@ class DBService {
       this.isSupabaseReady = true;
     }
 
+    // 5. Sinkronkan cache lokal untuk voters, ballots, dan pimpinan_asal
+    const currentVoters = await this.getVoters();
+    for (const v of currentVoters) {
+      if (v.pimpinan_id === id) {
+        deletedVoterIds.add(v.id);
+      }
+    }
+    const remainingVoters = currentVoters.filter((v) => v.pimpinan_id !== id && !deletedVoterIds.has(v.id));
+    safeSetItem(LOCAL_STORAGE_KEYS.VOTERS, JSON.stringify(remainingVoters));
+
+    if (deletedVoterIds.size > 0) {
+      const ballots = await this.getBallots();
+      const remainingBallots = ballots.filter((b) => !deletedVoterIds.has(b.voter_id));
+      await this.saveBallots(remainingBallots);
+    }
+
     const list = await this.getPimpinanList();
     const filtered = list.filter((p) => p.id !== id);
-    localStorage.setItem(LOCAL_STORAGE_KEYS.PIMPINAN, JSON.stringify(filtered));
+    safeSetItem(LOCAL_STORAGE_KEYS.PIMPINAN, JSON.stringify(filtered));
+
+    // 6. Hitung ulang perolehan suara formatur agar tetap sinkron
+    await this.syncVotesWithVoters();
   }
 
   /**

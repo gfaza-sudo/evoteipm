@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { useApp } from '../../context/AppContext';
 import { dbService } from '../../lib/dbService';
 import { Voter } from '../../types';
@@ -15,14 +15,39 @@ import {
   RotateCcw,
   Sparkles,
   KeyRound,
-  Download,
   AlertTriangle,
-  Building2,
   ArrowLeft,
-  SlidersHorizontal,
   ChevronLeft,
   ChevronRight,
+  ArrowUpDown,
+  ArrowUp,
+  ArrowDown,
+  ChevronDown,
+  Check,
 } from 'lucide-react';
+
+type VoterSortOption =
+  | 'name_asc'
+  | 'name_desc'
+  | 'user_id_asc'
+  | 'user_id_desc'
+  | 'pimpinan_asc'
+  | 'pimpinan_desc'
+  | 'status_voted_first'
+  | 'status_not_voted_first'
+  | 'newest';
+
+const VOTER_SORT_OPTIONS: { value: VoterSortOption; label: string; shortLabel: string }[] = [
+  { value: 'name_asc', label: 'Nama Lengkap (A - Z)', shortLabel: 'Nama (A-Z)' },
+  { value: 'name_desc', label: 'Nama Lengkap (Z - A)', shortLabel: 'Nama (Z-A)' },
+  { value: 'user_id_asc', label: 'User ID (A - Z / 0 - 9)', shortLabel: 'User ID (A-Z)' },
+  { value: 'user_id_desc', label: 'User ID (Z - A / 9 - 0)', shortLabel: 'User ID (Z-A)' },
+  { value: 'pimpinan_asc', label: 'Asal Pimpinan (A - Z)', shortLabel: 'Pimpinan (A-Z)' },
+  { value: 'pimpinan_desc', label: 'Asal Pimpinan (Z - A)', shortLabel: 'Pimpinan (Z-A)' },
+  { value: 'status_voted_first', label: 'Status: Sudah Memilih dulu', shortLabel: 'Sudah Memilih' },
+  { value: 'status_not_voted_first', label: 'Status: Belum Memilih dulu', shortLabel: 'Belum Memilih' },
+  { value: 'newest', label: 'Terbaru Ditambahkan', shortLabel: 'Terbaru' },
+];
 
 const SAMPLE_NAMES_POOL = [
   'Ahmad Fauzi',
@@ -65,11 +90,29 @@ const SAMPLE_NAMES_POOL = [
 export const VotersView: React.FC = () => {
   const { voters, pimpinanList, refreshData, setAdminActiveTab } = useApp();
   const tableContainerRef = useRef<HTMLDivElement>(null);
+  const sortMenuRef = useRef<HTMLDivElement>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<'all' | 'voted' | 'not_voted'>('all');
   const [pimpinanFilter, setPimpinanFilter] = useState<string>('all');
+  const [sortBy, setSortBy] = useState<VoterSortOption>('name_asc');
+  const [sortMenuOpen, setSortMenuOpen] = useState(false);
   const [successBanner, setSuccessBanner] = useState('');
   const [bannerError, setBannerError] = useState('');
+
+  useEffect(() => {
+    if (!sortMenuOpen) return;
+    const handleClickOutside = (event: MouseEvent | TouchEvent) => {
+      if (sortMenuRef.current && !sortMenuRef.current.contains(event.target as Node)) {
+        setSortMenuOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    document.addEventListener('touchstart', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('touchstart', handleClickOutside);
+    };
+  }, [sortMenuOpen]);
 
   const [modalOpen, setModalOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<Voter | null>(null);
@@ -292,25 +335,78 @@ export const VotersView: React.FC = () => {
     }
   };
 
-  const filteredList = voters.filter((v) => {
-    const matchSearch =
-      v.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      v.user_id.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (v.pimpinan_name && v.pimpinan_name.toLowerCase().includes(searchTerm.toLowerCase())) ||
-      v.position.toLowerCase().includes(searchTerm.toLowerCase());
+  const filteredList = voters
+    .filter((v) => {
+      const matchSearch =
+        v.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        v.user_id.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (v.pimpinan_name && v.pimpinan_name.toLowerCase().includes(searchTerm.toLowerCase())) ||
+        v.position.toLowerCase().includes(searchTerm.toLowerCase());
 
-    const matchStatus =
-      statusFilter === 'all'
-        ? true
-        : statusFilter === 'voted'
-        ? v.has_voted
-        : !v.has_voted;
+      const matchStatus =
+        statusFilter === 'all'
+          ? true
+          : statusFilter === 'voted'
+          ? v.has_voted
+          : !v.has_voted;
 
-    const matchPimpinan =
-      pimpinanFilter === 'all' ? true : v.pimpinan_id === pimpinanFilter;
+      const matchPimpinan =
+        pimpinanFilter === 'all' ? true : v.pimpinan_id === pimpinanFilter;
 
-    return matchSearch && matchStatus && matchPimpinan;
-  });
+      return matchSearch && matchStatus && matchPimpinan;
+    })
+    .sort((a, b) => {
+      const compareStrings = (s1: string, s2: string) =>
+        s1.localeCompare(s2, 'id', { numeric: true, sensitivity: 'base' });
+
+      switch (sortBy) {
+        case 'name_asc':
+          return compareStrings(a.name || '', b.name || '');
+        case 'name_desc':
+          return compareStrings(b.name || '', a.name || '');
+        case 'user_id_asc':
+          return compareStrings(a.user_id || '', b.user_id || '');
+        case 'user_id_desc':
+          return compareStrings(b.user_id || '', a.user_id || '');
+        case 'pimpinan_asc':
+          return (
+            compareStrings(a.pimpinan_name || '', b.pimpinan_name || '') ||
+            compareStrings(a.user_id || '', b.user_id || '')
+          );
+        case 'pimpinan_desc':
+          return (
+            compareStrings(b.pimpinan_name || '', a.pimpinan_name || '') ||
+            compareStrings(a.user_id || '', b.user_id || '')
+          );
+        case 'status_voted_first':
+          return Number(b.has_voted) - Number(a.has_voted) || compareStrings(a.name || '', b.name || '');
+        case 'status_not_voted_first':
+          return Number(a.has_voted) - Number(b.has_voted) || compareStrings(a.name || '', b.name || '');
+        case 'newest': {
+          const tA = a.created_at ? new Date(a.created_at).getTime() : 0;
+          const tB = b.created_at ? new Date(b.created_at).getTime() : 0;
+          return tB - tA || compareStrings(a.name || '', b.name || '');
+        }
+        default:
+          return 0;
+      }
+    });
+
+  const activeSortOption = VOTER_SORT_OPTIONS.find((opt) => opt.value === sortBy) || VOTER_SORT_OPTIONS[0];
+
+  const handleToggleColumnSort = (column: 'user_id' | 'name' | 'pimpinan' | 'status') => {
+    if (column === 'user_id') {
+      setSortBy((prev) => (prev === 'user_id_asc' ? 'user_id_desc' : 'user_id_asc'));
+    } else if (column === 'name') {
+      setSortBy((prev) => (prev === 'name_asc' ? 'name_desc' : 'name_asc'));
+    } else if (column === 'pimpinan') {
+      setSortBy((prev) => (prev === 'pimpinan_asc' ? 'pimpinan_desc' : 'pimpinan_asc'));
+    } else if (column === 'status') {
+      setSortBy((prev) =>
+        prev === 'status_voted_first' ? 'status_not_voted_first' : 'status_voted_first'
+      );
+    }
+  };
 
   return (
     <div className="space-y-6">
@@ -409,9 +505,9 @@ export const VotersView: React.FC = () => {
       )}
 
       {/* Filter and Search Bar */}
-      <div className="bg-white p-4 rounded-2xl border border-slate-200/80 shadow-xs flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3 text-xs">
+      <div className="bg-white p-4 rounded-2xl border border-slate-200/80 shadow-xs flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-3 text-xs">
         {/* Search Input */}
-        <div className="relative flex-1">
+        <div className="relative flex-1 min-w-[180px]">
           <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
           <input
             type="text"
@@ -423,11 +519,11 @@ export const VotersView: React.FC = () => {
         </div>
 
         {/* Status Filter */}
-        <div className="flex items-center gap-1.5 p-1 bg-slate-100 rounded-xl">
+        <div className="flex items-center gap-1.5 p-1 bg-slate-100 rounded-xl overflow-x-auto">
           <button
             type="button"
             onClick={() => setStatusFilter('all')}
-            className={`px-3 py-1.5 rounded-lg font-semibold transition-colors ${
+            className={`px-3 py-1.5 rounded-lg font-semibold transition-colors whitespace-nowrap ${
               statusFilter === 'all'
                 ? 'bg-white text-slate-900 shadow-xs'
                 : 'text-slate-600 hover:text-slate-900'
@@ -438,7 +534,7 @@ export const VotersView: React.FC = () => {
           <button
             type="button"
             onClick={() => setStatusFilter('voted')}
-            className={`px-3 py-1.5 rounded-lg font-semibold transition-colors ${
+            className={`px-3 py-1.5 rounded-lg font-semibold transition-colors whitespace-nowrap ${
               statusFilter === 'voted'
                 ? 'bg-emerald-600 text-white shadow-xs'
                 : 'text-slate-600 hover:text-slate-900'
@@ -449,7 +545,7 @@ export const VotersView: React.FC = () => {
           <button
             type="button"
             onClick={() => setStatusFilter('not_voted')}
-            className={`px-3 py-1.5 rounded-lg font-semibold transition-colors ${
+            className={`px-3 py-1.5 rounded-lg font-semibold transition-colors whitespace-nowrap ${
               statusFilter === 'not_voted'
                 ? 'bg-slate-700 text-white shadow-xs'
                 : 'text-slate-600 hover:text-slate-900'
@@ -459,20 +555,84 @@ export const VotersView: React.FC = () => {
           </button>
         </div>
 
-        {/* Pimpinan Filter */}
-        <div className="w-full md:w-56">
-          <select
-            value={pimpinanFilter}
-            onChange={(e) => setPimpinanFilter(e.target.value)}
-            className="w-full px-3 py-2 rounded-xl border border-slate-200 focus:outline-hidden focus:border-amber-500 bg-white"
-          >
-            <option value="all">Semua Asal Pimpinan</option>
-            {pimpinanList.map((p) => (
-              <option key={p.id} value={p.id}>
-                {p.name}
-              </option>
-            ))}
-          </select>
+        {/* Pimpinan Filter & Sort By Button */}
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5">
+          <div className="w-full sm:w-48">
+            <select
+              value={pimpinanFilter}
+              onChange={(e) => setPimpinanFilter(e.target.value)}
+              className="w-full px-3 py-2 rounded-xl border border-slate-200 focus:outline-hidden focus:border-amber-500 bg-white"
+            >
+              <option value="all">Semua Asal Pimpinan</option>
+              {pimpinanList.map((p) => (
+                <option key={p.id} value={p.id}>
+                  {p.name}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {/* Sort By Button & Dropdown */}
+          <div ref={sortMenuRef} className="relative">
+            <button
+              type="button"
+              onClick={() => setSortMenuOpen((prev) => !prev)}
+              aria-expanded={sortMenuOpen}
+              aria-haspopup="listbox"
+              className={`w-full sm:w-auto inline-flex items-center justify-between sm:justify-start gap-2 px-3.5 py-2 rounded-xl border font-semibold transition-colors shadow-2xs ${
+                sortMenuOpen
+                  ? 'border-amber-500 bg-amber-50 text-amber-900 ring-2 ring-amber-500/20'
+                  : 'border-slate-200 bg-white hover:bg-slate-50 text-slate-700'
+              }`}
+              title="Urutkan daftar pemilih tetap (Sort by)"
+            >
+              <span className="inline-flex items-center gap-1.5 truncate">
+                <ArrowUpDown className="w-3.5 h-3.5 text-amber-600 shrink-0" />
+                <span className="text-slate-500 font-medium">Sort by:</span>
+                <span className="font-bold text-slate-900 truncate">{activeSortOption.shortLabel}</span>
+              </span>
+              <ChevronDown
+                className={`w-3.5 h-3.5 text-slate-400 shrink-0 transition-transform ${
+                  sortMenuOpen ? 'rotate-180 text-amber-600' : ''
+                }`}
+              />
+            </button>
+
+            {sortMenuOpen && (
+              <div
+                role="listbox"
+                aria-label="Urutkan Daftar Pemilih Tetap"
+                className="absolute right-0 mt-2 w-full sm:w-64 bg-white rounded-2xl border border-slate-200 shadow-xl py-1.5 z-30 animate-in fade-in zoom-in-95 duration-100"
+              >
+                <div className="px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider text-slate-400 border-b border-slate-100">
+                  Urutkan Berdasarkan
+                </div>
+                {VOTER_SORT_OPTIONS.map((opt) => {
+                  const isSelected = sortBy === opt.value;
+                  return (
+                    <button
+                      key={opt.value}
+                      type="button"
+                      role="option"
+                      aria-selected={isSelected}
+                      onClick={() => {
+                        setSortBy(opt.value);
+                        setSortMenuOpen(false);
+                      }}
+                      className={`w-full px-3.5 py-2 text-left flex items-center justify-between gap-2 text-xs transition-colors ${
+                        isSelected
+                          ? 'bg-amber-50 text-amber-950 font-bold'
+                          : 'text-slate-700 hover:bg-slate-50 font-medium'
+                      }`}
+                    >
+                      <span>{opt.label}</span>
+                      {isSelected && <Check className="w-3.5 h-3.5 text-amber-600 shrink-0" />}
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+          </div>
         </div>
       </div>
 
@@ -534,11 +694,75 @@ export const VotersView: React.FC = () => {
             <thead>
               <tr className="bg-slate-50/80 border-b border-slate-200 text-slate-600 font-bold">
                 <th className="py-3 px-3 w-12 text-center shrink-0">No</th>
-                <th className="py-3 px-3 w-32 shrink-0">User ID</th>
-                <th className="py-3 px-4 min-w-[170px]">Nama Lengkap</th>
+                <th className="py-3 px-3 w-32 shrink-0">
+                  <button
+                    type="button"
+                    onClick={() => handleToggleColumnSort('user_id')}
+                    className="inline-flex items-center gap-1 hover:text-slate-900 transition-colors"
+                    title="Urutkan berdasarkan User ID"
+                  >
+                    <span>User ID</span>
+                    {sortBy === 'user_id_asc' ? (
+                      <ArrowUp className="w-3 h-3 text-amber-600" />
+                    ) : sortBy === 'user_id_desc' ? (
+                      <ArrowDown className="w-3 h-3 text-amber-600" />
+                    ) : (
+                      <ArrowUpDown className="w-3 h-3 text-slate-400" />
+                    )}
+                  </button>
+                </th>
+                <th className="py-3 px-4 min-w-[170px]">
+                  <button
+                    type="button"
+                    onClick={() => handleToggleColumnSort('name')}
+                    className="inline-flex items-center gap-1 hover:text-slate-900 transition-colors"
+                    title="Urutkan berdasarkan Nama Lengkap"
+                  >
+                    <span>Nama Lengkap</span>
+                    {sortBy === 'name_asc' ? (
+                      <ArrowUp className="w-3 h-3 text-amber-600" />
+                    ) : sortBy === 'name_desc' ? (
+                      <ArrowDown className="w-3 h-3 text-amber-600" />
+                    ) : (
+                      <ArrowUpDown className="w-3 h-3 text-slate-400" />
+                    )}
+                  </button>
+                </th>
                 <th className="py-3 px-4 min-w-[150px]">Jabatan</th>
-                <th className="py-3 px-4 min-w-[160px]">Asal Pimpinan</th>
-                <th className="py-3 px-3 w-36 text-center shrink-0">Status Suara</th>
+                <th className="py-3 px-4 min-w-[160px]">
+                  <button
+                    type="button"
+                    onClick={() => handleToggleColumnSort('pimpinan')}
+                    className="inline-flex items-center gap-1 hover:text-slate-900 transition-colors"
+                    title="Urutkan berdasarkan Asal Pimpinan"
+                  >
+                    <span>Asal Pimpinan</span>
+                    {sortBy === 'pimpinan_asc' ? (
+                      <ArrowUp className="w-3 h-3 text-amber-600" />
+                    ) : sortBy === 'pimpinan_desc' ? (
+                      <ArrowDown className="w-3 h-3 text-amber-600" />
+                    ) : (
+                      <ArrowUpDown className="w-3 h-3 text-slate-400" />
+                    )}
+                  </button>
+                </th>
+                <th className="py-3 px-3 w-36 text-center shrink-0">
+                  <button
+                    type="button"
+                    onClick={() => handleToggleColumnSort('status')}
+                    className="inline-flex items-center justify-center gap-1 hover:text-slate-900 transition-colors"
+                    title="Urutkan berdasarkan Status Suara"
+                  >
+                    <span>Status Suara</span>
+                    {sortBy === 'status_voted_first' ? (
+                      <ArrowUp className="w-3 h-3 text-amber-600" />
+                    ) : sortBy === 'status_not_voted_first' ? (
+                      <ArrowDown className="w-3 h-3 text-amber-600" />
+                    ) : (
+                      <ArrowUpDown className="w-3 h-3 text-slate-400" />
+                    )}
+                  </button>
+                </th>
                 <th className="py-3 px-3 w-28 text-center shrink-0">Aksi</th>
               </tr>
             </thead>

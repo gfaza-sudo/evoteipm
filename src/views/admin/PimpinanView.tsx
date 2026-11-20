@@ -24,6 +24,7 @@ export const PimpinanView: React.FC = () => {
   const [modalOpen, setModalOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<PimpinanAsal | null>(null);
   const [deleteId, setDeleteId] = useState<string | null>(null);
+  const [deleting, setDeleting] = useState(false);
 
   // Quick adjust voter modal
   const [adjustModalItem, setAdjustModalItem] = useState<PimpinanAsal | null>(null);
@@ -137,17 +138,20 @@ export const PimpinanView: React.FC = () => {
 
   const handleDelete = async () => {
     if (!deleteId) return;
+    setDeleting(true);
     setBannerError('');
     try {
       await dbService.deletePimpinan(deleteId);
       await refreshData();
       setDeleteId(null);
-      setSuccessBanner('Data asal pimpinan berhasil dihapus.');
-      setTimeout(() => setSuccessBanner(''), 4000);
+      setSuccessBanner('Data asal pimpinan beserta akun pemilih terkait di DPT berhasil dihapus.');
+      setTimeout(() => setSuccessBanner(''), 5000);
     } catch (err: any) {
       console.error(err);
       setDeleteId(null);
       setBannerError(err?.message || 'Gagal menghapus data asal pimpinan dari Supabase.');
+    } finally {
+      setDeleting(false);
     }
   };
 
@@ -577,22 +581,28 @@ export const PimpinanView: React.FC = () => {
             </div>
             <h3 className="text-base font-bold text-slate-900 mb-1">Hapus Asal Pimpinan?</h3>
             <p className="text-xs text-slate-500 mb-5 leading-relaxed">
-              Tindakan ini tidak dapat dibatalkan. Pemilih yang terkait dengan pimpinan ini akan kehilangan relasi asal pimpinan.
+              Tindakan ini tidak dapat dibatalkan. Seluruh akun pemilih yang terdaftar pada pimpinan{' '}
+              <strong className="text-slate-700">
+                {pimpinanList.find((p) => p.id === deleteId)?.name || 'ini'}
+              </strong>{' '}
+              ({getVoterCount(deleteId)} pemilih) di Daftar Pemilih Tetap (DPT) juga akan ikut terhapus secara otomatis.
             </p>
             <div className="flex justify-center gap-2">
               <button
                 type="button"
+                disabled={deleting}
                 onClick={() => setDeleteId(null)}
-                className="px-4 py-2 border border-slate-200 text-xs font-semibold text-slate-700 rounded-xl hover:bg-slate-100"
+                className="px-4 py-2 border border-slate-200 text-xs font-semibold text-slate-700 rounded-xl hover:bg-slate-100 disabled:opacity-50"
               >
                 Batal
               </button>
               <button
                 type="button"
+                disabled={deleting}
                 onClick={handleDelete}
-                className="px-4 py-2 bg-rose-600 text-white text-xs font-bold rounded-xl hover:bg-rose-700 shadow-xs"
+                className="px-4 py-2 bg-rose-600 text-white text-xs font-bold rounded-xl hover:bg-rose-700 shadow-xs disabled:opacity-50"
               >
-                Ya, Hapus
+                {deleting ? 'Menghapus...' : 'Ya, Hapus Semua'}
               </button>
             </div>
           </div>
