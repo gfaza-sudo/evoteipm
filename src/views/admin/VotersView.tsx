@@ -125,7 +125,7 @@ export const VotersView: React.FC = () => {
   const [sampleModalOpen, setSampleModalOpen] = useState(false);
   const [sampleCount, setSampleCount] = useState<number>(5);
   const [sampleTargetPimpinan, setSampleTargetPimpinan] = useState<string>('');
-  const [sampleNameMode, setSampleNameMode] = useState<'realistic' | 'numbered'>('realistic');
+  const [sampleNameMode, setSampleNameMode] = useState<'realistic' | 'numbered' | 'delegasi'>('realistic');
   const [sampleOperating, setSampleOperating] = useState(false);
 
   // Form states
@@ -241,38 +241,71 @@ export const VotersView: React.FC = () => {
     }
   };
 
+  const getPimpinanUserIdPrefix = (pimpinanId?: string) => {
+    const target = pimpinanList.find((p) => p.id === pimpinanId) || pimpinanList[0];
+    if (!target?.code) return 'IPM';
+    const cleaned = target.code
+      .trim()
+      .replace(/[^a-zA-Z0-9-]/g, '')
+      .replace(/-+/g, '-')
+      .replace(/^-|-$/g, '')
+      .toUpperCase();
+    return cleaned || 'IPM';
+  };
+
   // Sample voters generator and manager
   const handleAddSampleVoters = async (
     countToGenerate: number = 5,
     selectedPimpinanId?: string,
-    mode: 'realistic' | 'numbered' = sampleNameMode
+    mode: 'realistic' | 'numbered' | 'delegasi' = sampleNameMode
   ) => {
     setSampleOperating(true);
+    setErrorMsg('');
     try {
-      const targetPimpinan = selectedPimpinanId || sampleTargetPimpinan || pimpinanList[0]?.id || undefined;
+      const targetPimpinanId = selectedPimpinanId || sampleTargetPimpinan || pimpinanList[0]?.id || undefined;
+      const targetPimpinanObj = pimpinanList.find((p) => p.id === targetPimpinanId);
+      const userIdPrefix = getPimpinanUserIdPrefix(targetPimpinanId);
+
+      const existingIds = new Set(voters.map((v) => v.user_id.toUpperCase()));
+      const existingPimpinanCount = targetPimpinanId
+        ? voters.filter((v) => v.pimpinan_id === targetPimpinanId).length
+        : voters.length;
+
+      let seq = existingPimpinanCount;
       const existingCount = voters.length;
 
       for (let i = 0; i < countToGenerate; i++) {
-        const seq = existingCount + i + 1;
-        const padSeq = String(seq).padStart(3, '0');
-        const userId = `PCM-2026-${padSeq}`;
+        seq += 1;
+        let userId = `${userIdPrefix}-${String(seq).padStart(3, '0')}`;
+        while (existingIds.has(userId)) {
+          seq += 1;
+          userId = `${userIdPrefix}-${String(seq).padStart(3, '0')}`;
+        }
+        existingIds.add(userId);
 
+        const globalSeq = existingCount + i + 1;
         let voterName = '';
-        if (mode === 'numbered') {
-          voterName = `Peserta Sample #${seq}`;
+        let voterPosition = 'Peserta Musycab (Sample)';
+
+        if (mode === 'delegasi') {
+          const delegasiLabel = targetPimpinanObj?.name || 'Utusan Pimpinan';
+          voterName = `Delegasi ${delegasiLabel} #${String(seq).padStart(2, '0')}`;
+          voterPosition = `Delegasi ${delegasiLabel}`;
+        } else if (mode === 'numbered') {
+          voterName = `Peserta Sample #${globalSeq}`;
         } else {
           const poolIndex = (existingCount + i) % SAMPLE_NAMES_POOL.length;
           voterName = SAMPLE_NAMES_POOL[poolIndex];
           if (voters.some((v) => v.name.toLowerCase() === voterName.toLowerCase())) {
-            voterName = `${voterName} #${seq}`;
+            voterName = `${voterName} #${globalSeq}`;
           }
         }
 
         await dbService.createVoter({
           user_id: userId,
           name: voterName,
-          position: 'Peserta Musycab (Sample)',
-          pimpinan_id: targetPimpinan,
+          position: voterPosition,
+          pimpinan_id: targetPimpinanId,
           passwordPlain: 'pemilih123',
         });
       }
@@ -291,6 +324,7 @@ export const VotersView: React.FC = () => {
 
   const handleRemoveSampleVoters = async (countToRemove: number = 5) => {
     setSampleOperating(true);
+    setErrorMsg('');
     try {
       const unvoted = voters.filter((v) => !v.has_voted);
       if (unvoted.length === 0) {
@@ -1136,49 +1170,80 @@ export const VotersView: React.FC = () => {
                   onChange={(e) => setSampleTargetPimpinan(e.target.value)}
                   className="w-full px-3 py-2 border border-slate-200 rounded-xl bg-white text-xs font-medium focus:outline-hidden focus:border-amber-500 focus:ring-2 focus:ring-amber-500/20"
                 >
-                  <option value="">-- Pimpinan Pertama (Default) --</option>
+                  <option value="">
+                    -- Pimpinan Pertama ({pimpinanList[0] ? `${pimpinanList[0].name} - ${pimpinanList[0].code}` : 'Default'}) --
+                  </option>
                   {pimpinanList.map((p) => (
                     <option key={p.id} value={p.id}>
                       {p.name} ({p.code})
                     </option>
                   ))}
                 </select>
+                <p className="text-[11px] text-slate-500 mt-1">
+                  User ID otomatis mengikuti kode asal pimpinan:{' '}
+                  <code className="font-mono font-bold text-amber-800 bg-amber-50 px-1.5 py-0.5 rounded border border-amber-200">
+                    {getPimpinanUserIdPrefix(sampleTargetPimpinan || pimpinanList[0]?.id)}-00X
+                  </code>
+                </p>
               </div>
 
               <div>
                 <label className="block text-xs font-bold text-slate-700 mb-1.5">
                   Format Penamaan Sample:
                 </label>
-                <div className="grid grid-cols-2 gap-2 text-xs">
-                  <button
-                    type="button"
-                    onClick={() => setSampleNameMode('realistic')}
-                    className={`p-2.5 rounded-xl border text-left transition-all ${
-                      sampleNameMode === 'realistic'
-                        ? 'border-amber-500 bg-amber-50/50 text-slate-900 font-bold ring-1 ring-amber-500'
-                        : 'border-slate-200 hover:bg-slate-50 text-slate-600'
-                    }`}
-                  >
-                    <p className="font-bold">Nama Realistis</p>
-                    <p className="text-[10px] text-slate-500 mt-0.5">
-                      Contoh: Ahmad Fauzi, Budi Santoso
-                    </p>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setSampleNameMode('numbered')}
-                    className={`p-2.5 rounded-xl border text-left transition-all ${
-                      sampleNameMode === 'numbered'
-                        ? 'border-amber-500 bg-amber-50/50 text-slate-900 font-bold ring-1 ring-amber-500'
-                        : 'border-slate-200 hover:bg-slate-50 text-slate-600'
-                    }`}
-                  >
-                    <p className="font-bold">Format Nomor</p>
-                    <p className="text-[10px] text-slate-500 mt-0.5">
-                      Contoh: Peserta Sample #01, #02
-                    </p>
-                  </button>
-                </div>
+                {(() => {
+                  const previewPimpinan =
+                    pimpinanList.find((p) => p.id === (sampleTargetPimpinan || pimpinanList[0]?.id)) ||
+                    pimpinanList[0];
+                  const previewName = previewPimpinan?.name || 'Asal Pimpinan';
+                  const previewPrefix = getPimpinanUserIdPrefix(previewPimpinan?.id);
+                  return (
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 text-xs">
+                      <button
+                        type="button"
+                        onClick={() => setSampleNameMode('realistic')}
+                        className={`p-2.5 rounded-xl border text-left transition-all ${
+                          sampleNameMode === 'realistic'
+                            ? 'border-amber-500 bg-amber-50/50 text-slate-900 font-bold ring-1 ring-amber-500'
+                            : 'border-slate-200 hover:bg-slate-50 text-slate-600'
+                        }`}
+                      >
+                        <p className="font-bold">Nama Realistis</p>
+                        <p className="text-[10px] text-slate-500 mt-0.5 leading-snug">
+                          Contoh: Ahmad Fauzi, Budi Santoso
+                        </p>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setSampleNameMode('numbered')}
+                        className={`p-2.5 rounded-xl border text-left transition-all ${
+                          sampleNameMode === 'numbered'
+                            ? 'border-amber-500 bg-amber-50/50 text-slate-900 font-bold ring-1 ring-amber-500'
+                            : 'border-slate-200 hover:bg-slate-50 text-slate-600'
+                        }`}
+                      >
+                        <p className="font-bold">Format Nomor</p>
+                        <p className="text-[10px] text-slate-500 mt-0.5 leading-snug">
+                          Contoh: Peserta Sample #01, #02
+                        </p>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setSampleNameMode('delegasi')}
+                        className={`p-2.5 rounded-xl border text-left transition-all ${
+                          sampleNameMode === 'delegasi'
+                            ? 'border-amber-500 bg-amber-50/50 text-slate-900 font-bold ring-1 ring-amber-500'
+                            : 'border-slate-200 hover:bg-slate-50 text-slate-600'
+                        }`}
+                      >
+                        <p className="font-bold">Delegasi Pimpinan</p>
+                        <p className="text-[10px] text-slate-500 mt-0.5 leading-snug">
+                          Delegasi {previewName} #01 ({previewPrefix}-001)
+                        </p>
+                      </button>
+                    </div>
+                  );
+                })()}
               </div>
 
               <div className="p-3 bg-amber-50/70 border border-amber-200/80 rounded-xl text-xs text-amber-900 space-y-1">
