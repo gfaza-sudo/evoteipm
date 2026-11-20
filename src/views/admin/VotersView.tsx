@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useApp } from '../../context/AppContext';
-import { dbService } from '../../lib/dbService';
+import { dbService, formatPimpinanUserIdPrefix } from '../../lib/dbService';
 import { Voter } from '../../types';
 import {
   Users,
@@ -243,14 +243,7 @@ export const VotersView: React.FC = () => {
 
   const getPimpinanUserIdPrefix = (pimpinanId?: string) => {
     const target = pimpinanList.find((p) => p.id === pimpinanId) || pimpinanList[0];
-    if (!target?.code) return 'IPM';
-    const cleaned = target.code
-      .trim()
-      .replace(/[^a-zA-Z0-9-]/g, '')
-      .replace(/-+/g, '-')
-      .replace(/^-|-$/g, '')
-      .toUpperCase();
-    return cleaned || 'IPM';
+    return formatPimpinanUserIdPrefix(target?.code);
   };
 
   // Sample voters generator and manager
@@ -814,7 +807,7 @@ export const VotersView: React.FC = () => {
                       {idx + 1}
                     </td>
                     <td className="py-3 px-3">
-                      <span className="font-mono font-bold text-amber-800 bg-amber-50 px-2 py-0.5 rounded-md border border-amber-200">
+                      <span className="inline-block whitespace-nowrap font-mono font-bold text-amber-800 bg-amber-50 px-2 py-0.5 rounded-md border border-amber-200">
                         {voter.user_id}
                       </span>
                     </td>

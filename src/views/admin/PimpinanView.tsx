@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useApp } from '../../context/AppContext';
-import { dbService } from '../../lib/dbService';
+import { dbService, formatPimpinanUserIdPrefix } from '../../lib/dbService';
 import { PimpinanAsal } from '../../types';
 import {
   Building2,
@@ -425,7 +425,7 @@ export const PimpinanView: React.FC = () => {
                   </button>
                 </div>
                 <p className="text-[11px] text-slate-500 mt-2 leading-relaxed">
-                  Jika jumlah ditambah, akun pemilih baru akan dibuat otomatis (contoh: <code>{adjustModalItem.code}-00X</code>). Jika dikurangi, akun pemilih yang belum memilih akan disesuaikan.
+                  Jika jumlah ditambah, akun pemilih baru akan dibuat otomatis (contoh: <code>{formatPimpinanUserIdPrefix(adjustModalItem.code)}-00X</code>). Jika dikurangi, akun pemilih yang belum memilih akan disesuaikan.
                 </p>
               </div>
 

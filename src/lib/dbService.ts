@@ -7,6 +7,11 @@ function isValidUuid(val?: string | null): val is string {
   return Boolean(val && UUID_REGEX.test(val));
 }
 
+export function formatPimpinanUserIdPrefix(code?: string | null): string {
+  const cleaned = (code || 'IPM').replace(/[^a-zA-Z0-9]/g, '').toUpperCase();
+  return cleaned || 'IPM';
+}
+
 const LOCAL_STORAGE_KEYS = {
   SETTINGS: 'evote_settings',
   PIMPINAN: 'evote_pimpinan',
@@ -361,7 +366,7 @@ class DBService {
     if (safeTarget > currentCount) {
       // Tambah akun pemilih baru sesuai kekurangan kuota
       const needed = safeTarget - currentCount;
-      const cleanCode = (pimpinan.code || 'IPM').replace(/[^a-zA-Z0-9]/g, '').toUpperCase();
+      const cleanCode = formatPimpinanUserIdPrefix(pimpinan.code);
       const existingIds = new Set(voters.map((v) => v.user_id.toUpperCase()));
       let seq = currentCount;
       for (let i = 1; i <= needed; i++) {
